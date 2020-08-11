@@ -94,6 +94,16 @@ extern int array_delete(struct _array *this, const int index) {
 int array_insert(struct _array *this, void *value, const size_t bytes, const int index) {
 
     sync(this);
+
+    for(int i = this->size - 1; i > index;  i--) {
+
+        delete(&this->p->block[i], this->p->ffp);
+        set(this, this->p->block[i - 1], bytes, i);
+    }
+
+    delete(&this->p->block[index], this->p->ffp);
+    set(this, value, bytes, index);
+
     return 0;
 }
 
