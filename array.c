@@ -50,6 +50,8 @@ struct _array* array_ctor(const int size, const void *ffp, const void *cfp) {
     array->p->size = size;
     array->size = size;
 
+    array->top = 0;
+
     return array;
 }
 
@@ -75,6 +77,22 @@ void array_dtor(struct _array *this) {
     free(this);
 }
 
+int array_push(struct _array *this, void *value, const size_t bytes) {
+
+    sync(this);
+    set(this, value, bytes, this->top);
+
+    this->top += 1;
+}
+
+void* array_pop(struct _array *this) {
+
+    sync(this);
+    delete(&this->p->block[this->top - 1], this->p->ffp);
+
+    this->top -= 1;
+}
+
 int array_set(struct _array *this, void *value, const size_t bytes, const int index) {
 
     sync(this);
@@ -83,7 +101,7 @@ int array_set(struct _array *this, void *value, const size_t bytes, const int in
     return 0;
 }
 
-extern int array_delete(struct _array *this, const int index) {
+int array_delete(struct _array *this, const int index) {
 
     sync(this);
     delete(&this->p->block[index], this->p->ffp);
