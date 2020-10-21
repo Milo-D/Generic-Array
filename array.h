@@ -6,14 +6,18 @@
 // C Headers
 #include <inttypes.h>
 
-struct _private;
-
 typedef struct _array {
 
+    // public Members
     int top;
     int size;
 
-    struct _private *p;
+    // private Members
+    int psize;
+    void **block;
+
+    void (*ffp)(void *fp);
+    void* (*cfp)(void *cp);
 
 } array_t;
 
