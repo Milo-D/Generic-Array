@@ -9,15 +9,6 @@
 // Project Headers
 #include "array.h"
 
-struct _private {
-
-    int size;
-    void **block;
-
-    void (*ffp)(void *fp);
-    void* (*cfp)(void *cp);
-};
-
 /* Forward Declaration of private Functions */
 
 static int set(struct _array *this, void *e, const size_t bytes, const int index);
@@ -33,22 +24,16 @@ struct _array* array_ctor(const int size, const void *ffp, const void *cfp) {
     if((array = malloc(sizeof(struct _array))) == NULL)
         return NULL;
 
-    if((array->p = malloc(sizeof(struct _private))) == NULL) {
-
-        free(array);
-        return NULL;
-    }
-
-    array->p->block = malloc(size * sizeof(void*));
+    array->block = malloc(size * sizeof(void*));
 
     for(int i = 0; i < size; i++)
-        array->p->block[i] = NULL;
+        array->block[i] = NULL;
 
-    array->p->ffp = ffp;
-    array->p->cfp = cfp;
+    array->ffp = ffp;
+    array->cfp = cfp;
 
-    array->p->size = size;
     array->size = size;
+    array->psize = size;
 
     array->top = 0;
 
@@ -66,14 +51,13 @@ void array_dtor(struct _array *this) {
 
     for(int i = 0; i < this->size; i++)  {
 
-        if(this->p->block[i] == NULL)
+        if(this->block[i] == NULL)
             continue;
 
-        delete(&this->p->block[i], this->p->ffp);
+        delete(&this->block[i], this->ffp);
     }
 
-    free(this->p->block);
-    free(this->p);
+    free(this->block);
     free(this);
 }
 
@@ -88,7 +72,7 @@ int array_push(struct _array *this, void *value, const size_t bytes) {
 void* array_pop(struct _array *this) {
 
     sync(this);
-    delete(&this->p->block[this->top - 1], this->p->ffp);
+    delete(&this->block[this->top - 1], this->ffp);
 
     this->top -= 1;
 }
@@ -104,7 +88,7 @@ int array_set(struct _array *this, void *value, const size_t bytes, const int in
 int array_delete(struct _array *this, const int index) {
 
     sync(this);
-    delete(&this->p->block[index], this->p->ffp);
+    delete(&this->block[index], this->ffp);
 
     return 0;
 }
@@ -115,11 +99,11 @@ int array_insert(struct _array *this, void *value, const size_t bytes, const int
 
     for(int i = this->size - 1; i > index;  i--) {
 
-        delete(&this->p->block[i], this->p->ffp);
-        set(this, this->p->block[i - 1], bytes, i);
+        delete(&this->block[i], this->ffp);
+        set(this, this->block[i - 1], bytes, i);
     }
 
-    delete(&this->p->block[index], this->p->ffp);
+    delete(&this->block[index], this->ffp);
     set(this, value, bytes, index);
 
     return 0;
@@ -127,21 +111,21 @@ int array_insert(struct _array *this, void *value, const size_t bytes, const int
 
 void* array_at(const struct _array *this, const int index) {
 
-    return this->p->block[index];
+    return this->block[index];
 }
 
 /* --- Private --- */
 
 static int set(struct _array *this, void *e, const size_t bytes, const int index) {
 
-    if(this->p->cfp != NULL) {
+    if(this->cfp != NULL) {
 
-        this->p->block[index] = (void*) (*this->p->cfp)(e);
+        this->block[index] = (void*) (*this->cfp)(e);
 
     } else {
 
-        this->p->block[index] = malloc(bytes);
-        memcpy(this->p->block[index], e, bytes);
+        this->block[index] = malloc(bytes);
+        memcpy(this->block[index], e, bytes);
     }
 
     return 0;
@@ -159,11 +143,11 @@ static void delete(void **e, void (*ffp)(void *fp)) {
 
 static inline void sync(struct _array *this) {
 
-    if(this->size == this->p->size)
+    if(this->psize == this->size)
         return;
 
     const size_t bytes = this->size * sizeof(void*);
 
-    this->p->block = realloc(this->p->block, bytes);
-    this->p->size = this->size;
+    this->block = realloc(this->block, bytes);
+    this->psize = this->size;
 }
